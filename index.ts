@@ -18,13 +18,14 @@ try {
     console.error("❌ GAGAL MEMBACA bots_config.json! Pastikan file ada dan formatnya benar.");
     process.exit(1);
 }
+// =========================================================================
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const randomFloat = (min: number, max: number) => Math.random() * (max - min) + min;
 const randomChoice = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
 const getWaktu = () => new Date().toTimeString().split(' ')[0];
 
-// ================== FUNGSI DETEKSI & LOGIC 100% IDENTIK PYTHON ==================
+// ================== FUNGSI DETEKSI & LOGIC ==================
 function ekstrakInfoItem(item: any): [string | null, string] {
     if (typeof item === 'string' || typeof item === 'number') return [String(item), "Barang Misterius"];
     if (typeof item === 'object' && item !== null) {
@@ -117,14 +118,14 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
 
     const smartPrint = (msg: string) => {
         if (mem.last_log_msg !== msg) {
-            console.log(`[${getWaktu()}] [${BOT_NAME}] ${msg}`);
+            console.log(`[${getWaktu()}] ${msg}`);
             mem.last_log_msg = msg;
         }
     };
 
     const apiReq = async (method: string, endpoint: string, payload: any = null) => {
         try {
-            return await axios({ method, url: `${BASE_URL}${endpoint}`, data: payload, headers: HEADERS, timeout: 8000 });
+            return await axios({ method, url: `${BASE_URL}${endpoint}`, data: payload, headers: HEADERS, timeout: 10000 });
         } catch (e: any) {
             return e.response || null;
         }
@@ -260,9 +261,9 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                     let pDar = pAman.filter(r => r !== rSeb);
                     tId = cariPintuStrategis(pDar.length > 0 ? pDar : pAman, regDict, myHp < 60);
                 }
-                smartPrint(`🏃 ${msg}`);
-            } else if (pBlind.length > 0) { tId = randomChoice(pBlind); smartPrint(`🏃 ${msg}`); }
-            else if (pPend.length > 0) { tId = randomChoice(pPend); smartPrint(`🏃 ${msg}`); }
+                smartPrint(`[${BOT_NAME}] 🏃 ${msg}`);
+            } else if (pBlind.length > 0) { tId = randomChoice(pBlind); smartPrint(`[${BOT_NAME}] 🏃 ${msg}`); }
+            else if (pPend.length > 0) { tId = randomChoice(pPend); smartPrint(`[${BOT_NAME}] 🏃 ${msg}`); }
 
             if (tId) {
                 mem.visited_path = mem.visited_path.filter(p => p !== tId);
@@ -274,7 +275,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         };
 
         if (bestInvWId && (tgnKosong || bestInvWScore > eqScore)) {
-            smartPrint(`✨ UPGRADE SENJATA!`);
+            smartPrint(`[${BOT_NAME}] ✨ UPGRADE SENJATA! Pakai [${bestInvWName}]!`);
             return { type: "equip", itemId: bestInvWId };
         }
 
@@ -286,7 +287,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                 if (iId && mem.sampah_memory.has(iId)) continue;
                 if (isValidWeapon(iNm, item) && getWeaponScore(iNm) < maxSc) {
                     mem.sampah_memory.add(iId!);
-                    smartPrint(`🗑️ AUTO-CLEAN: Buang ${iNm} usang!`);
+                    smartPrint(`[${BOT_NAME}] 🗑️ AUTO-CLEAN: Buang ${iNm} usang!`);
                     return { type: "drop", itemId: iId };
                 }
             }
@@ -297,7 +298,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                 for (const b of brgTanah) {
                     let [bId, bNm] = ekstrakInfoItem(b);
                     if (isValidWeapon(bNm, b)) {
-                        smartPrint(`🚨 DARURAT SENJATA! Sikat ${bNm}!`);
+                        smartPrint(`[${BOT_NAME}] 🚨 DARURAT SENJATA! Sikat ${bNm}!`);
                         return { type: "pickup", itemId: bId };
                     }
                 }
@@ -312,11 +313,11 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
 
                 let isKoin = nl.includes("moltz") || nl.includes("coin");
                 if (isKoin) {
-                    smartPrint(`💰 MATA DUITAN! Ada ${bNm}, SIKAT!`);
+                    smartPrint(`[${BOT_NAME}] 💰 MATA DUITAN! Ada ${bNm}, SIKAT!`);
                     return { type: "pickup", itemId: bId };
                 }
                 if (inv.length < 10) {
-                    smartPrint(`🎒 Ambil Barang: ${bNm}!`);
+                    smartPrint(`[${BOT_NAME}] 🎒 Ambil Barang: ${bNm}!`);
                     return { type: "pickup", itemId: bId };
                 }
             }
@@ -332,14 +333,14 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
 
         let bHeal = isTrap ? 95 : 80;
         if (myHp < bHeal) {
-            if (idMed) { smartPrint(`🏥 Pakai Medical!`); return { type: "interact", interactableId: idMed }; }
-            if (idBandage) { smartPrint(`🚑 Pakai Heal! (HP:${myHp})`); return { type: "use_item", itemId: idBandage }; }
-            if (idPotion) { smartPrint(`🚑 Pakai Potion! (HP:${myHp})`); return { type: "use_item", itemId: idPotion }; }
+            if (idMed) { smartPrint(`[${BOT_NAME}] 🏥 Pakai Medical!`); return { type: "interact", interactableId: idMed }; }
+            if (idBandage) { smartPrint(`[${BOT_NAME}] 🚑 Suntik Obat! (HP:${myHp})`); return { type: "use_item", itemId: idBandage }; }
+            if (idPotion) { smartPrint(`[${BOT_NAME}] 🚑 Minum Potion! (HP:${myHp})`); return { type: "use_item", itemId: idPotion }; }
         }
 
         if (nPlay >= 3 && nPlay > kekuatan) {
             let a = aMov(`🚨 Musuh ${nPlay}, geng ${kekuatan}. KABUR!`);
-            if (a) return a; else smartPrint(`🛑 ZONA AKHIR BUNTU! TAWURAN SINI KAU!`);
+            if (a) return a; else smartPrint(`[${BOT_NAME}] 🛑 ZONA AKHIR BUNTU! TAWURAN SINI KAU!`);
         }
         if (nPlay >= 2 && nPlay > kekuatan && myHp < 75) {
             let a = aMov("🚨 Kalah jumlah geng & HP Bocor! Mundur!");
@@ -349,20 +350,20 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         if (tPlay) {
             let eHp = tPlay.hp || 100, eNm = tPlay.name || "Player";
             if (tgnKosong) {
-                let a = aMov("Tangan kosong! Lari!");
+                let a = aMov("Tangan kosong! Lari cari senjata!");
                 if (a) return a; return { type: "attack", targetId: tPlay.id, targetType: "agent" };
             }
             if (tPlay.jarak === 0) {
-                if (kekuatan > 1) { smartPrint(`🤝 GANKING MAFIA! Hajar ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
-                if (eHp <= 40) { smartPrint(`🦅 VULTURE MODE! Nyampah kill ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
-                if (myHp > 85 || eHp <= myHp) { smartPrint(`⚔️ Eksekusi ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
-                let a = aMov(`⚠️ ${eNm} sehat. Melipir ah!`);
+                if (kekuatan > 1) { smartPrint(`[${BOT_NAME}] 🤝 GANKING MAFIA! Hajar ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
+                if (eHp <= 40) { smartPrint(`[${BOT_NAME}] 🦅 VULTURE MODE! Nyampah kill ${eNm} (HP:${eHp})!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
+                if (myHp > 85 || eHp <= myHp) { smartPrint(`[${BOT_NAME}] ⚔️ Eksekusi ${eNm} (HP:${eHp})!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
+                let a = aMov(`⚠️ ${eNm} sehat (HP:${eHp}). Melipir ah!`);
                 if (a) return a;
-                smartPrint(`⚔️ Duel lawan ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" };
+                smartPrint(`[${BOT_NAME}] ⚔️ Mentok! Duel lawan ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" };
             } else if (tPlay.jarak > 0) {
-                if (wRange > 0) { smartPrint(`🎯 SNIPER! Tembak ${eNm}!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
+                if (wRange > 0) { smartPrint(`[${BOT_NAME}] 🎯 SNIPER! Tembak ${eNm} dari jauh!`); return { type: "attack", targetId: tPlay.id, targetType: "agent" }; }
                 if (eHp <= 30 && myHp > 70) {
-                    smartPrint(`🏃 Kejar ${eNm}!`);
+                    smartPrint(`[${BOT_NAME}] 🏃‍♂️ Kejar ${eNm} yg sekarat!`);
                     let trId = String(tPlay.regionId).toLowerCase();
                     mem.visited_path = mem.visited_path.filter(p => p !== trId);
                     mem.visited_path.push(trId);
@@ -374,17 +375,17 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         if (tMon && !tgnKosong && myHp >= 80) {
             let mNm = tMon.name || "Monster";
             if (tMon.jarak > 0 && wRange === 0) {
-                smartPrint(`🏃 Cari ${mNm}!`);
+                smartPrint(`[${BOT_NAME}] 🏃‍♂️ Cari ${mNm} buat farming koin!`);
                 return { type: "move", regionId: String(tMon.regionId).toLowerCase() };
             } else {
-                smartPrint(`👹 Bantai ${mNm}!`);
+                smartPrint(`[${BOT_NAME}] 👹 Bantai ${mNm} buat Koin!`);
                 return { type: "attack", targetId: tMon.id, targetType: "monster" };
             }
         }
 
-        if (idSup) { smartPrint(`📦 Maling Supply Cache!`); return { type: "interact", interactableId: idSup }; }
+        if (idSup) { smartPrint(`[${BOT_NAME}] 📦 Maling kotak Supply Cache!`); return { type: "interact", interactableId: idSup }; }
 
-        let actMove = aMov("🕵️ Patroli cari duit...");
+        let actMove = aMov("🕵️ Patroli cari duit & tempat aman...");
         if (actMove) return actMove;
 
         return { type: "explore" };
@@ -392,7 +393,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
 
     while (true) {
         if (botConfig.apiKey === "KOSONG" || botConfig.apiKey.includes("ISI_")) {
-            console.log(`❌ [${BOT_NAME}] API KEY BELUM DIISI!`);
+            console.log(`❌ [${BOT_NAME}] API KEY BELUM DIISI DI bots_config.json!`);
             break;
         }
 
@@ -410,24 +411,48 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             } catch (e) { }
         }
 
-        // 🔥 LOGIC PENCARI GAME "MODE TAWURAN" (AGRESIF) 🔥
+        // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT) 🔥
         while (!aid) {
             let res = await apiReq('GET', '/games?status=waiting');
-            if (res && res.data?.success && res.data.data?.length > 0) {
-                // Ambil room paling baru (paling bawah)
-                let g = res.data.data[res.data.data.length - 1];
-                if (g.status.toLowerCase() === "waiting" && g.entryType.toLowerCase() !== "paid") {
-                    gid = g.id;
-                    let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
-                    if (regRes && regRes.data?.success) {
-                        aid = regRes.data.data.id;
-                        fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
-                        apiReq('POST', `/games/${gid}/start`); // Paksa Start
-                        console.log(`🚀 [${getWaktu()}] [${BOT_NAME}] MASUK KE ARENA!`);
+            let listRoom = res?.data?.data || res?.data;
+
+            if (Array.isArray(listRoom) && listRoom.length > 0) {
+                // Cari dari urutan paling bawah (room paling baru dibikin)
+                for (let i = listRoom.length - 1; i >= 0; i--) {
+                    let g = listRoom[i];
+                    let sStatus = String(g?.status || "").toLowerCase();
+                    let sType = String(g?.entryType || "").toLowerCase();
+                    
+                    // Filter room yang beneran lagi nunggu dan GRATIS
+                    if (sStatus === "waiting" && sType !== "paid" && !(g?.fee > 0)) {
+                        gid = g.id || g._id;
+                        break;
                     }
                 }
             }
-            if (!aid) await sleep(randomFloat(400, 900)); // Delay super singkat biar gak dicolong bot lain
+
+            if (gid) {
+                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
+                let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
+
+                if (regRes && (regRes.data?.success || regRes.data?.id)) {
+                    aid = regRes.data?.data?.id || regRes.data?.id;
+                    console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
+                    fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
+                    
+                    // Paksa server buat Start game biar gak digantung
+                    apiReq('POST', `/games/${gid}/start`); 
+                } else {
+                    let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
+                    console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
+                    gid = null; // Reset biar balik ke mode cari
+                }
+            }
+
+            // Jeda barbar! Kalau belum dapet room, delay cuma 0.5 - 1 detik biar gercep
+            if (!aid) {
+                await sleep(randomFloat(500, 1500));
+            }
         }
 
         while (true) {
@@ -438,46 +463,60 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             let state = stRes.data?.data;
             if (!state) { await sleep(1000); continue; }
 
-            if (!state.self?.isAlive || state.gameStatus === "finished") {
-                console.log(`\n💀 [${BOT_NAME}] MATI / SELESAI.`);
+            if (!state.self?.isAlive) {
+                console.log(`\n💀 [${BOT_NAME}] MATI! TKP: ${state.currentRegion?.name || '?'}`);
+                if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE); await sleep(3000); break;
+            }
+            if (state.gameStatus === "finished") {
+                console.log(`\n🏁 [${BOT_NAME}] MATCH SELESAI!`);
                 if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE); await sleep(3000); break;
             }
 
             if (Date.now() - mem.last_print_time >= 20000) {
                 let hp = state.self.hp || "?", tas = (state.self.inventory || []).length, loc = state.currentRegion?.name || "?";
                 let eqItem = state.self.equippedWeapon || state.self.weapon;
-                let wpInfo = eqItem ? ekstrakInfoItem(eqItem)[1] : "Fist";
-                console.log(`\n[🎮 ${BOT_NAME}] HP:${hp} | Tas:${tas}/10 | Senj:${wpInfo} | Loc:${loc}`);
+                let wpInfo = "Tangan Kosong 👊";
+                if (eqItem) {
+                    let [, n] = ekstrakInfoItem(eqItem);
+                    if (!n.toLowerCase().includes("fist") && !n.toLowerCase().includes("none")) wpInfo = `${n} 🗡️`;
+                }
+                console.log(`\n[🎮 GAME ${String(gid).slice(-5)}] [${BOT_NAME}] | HP:${hp} | Tas:${tas}/10 | Senj: ${wpInfo} | Loc:${loc}`);
                 mem.last_print_time = Date.now();
                 mem.last_log_msg = "";
             }
 
             let action = decideAction(state);
             if (action) {
-                if (action.type === "WAITING_CD") { await sleep(1000); continue; }
+                if (action.type === "WAITING_CD") { await sleep(1500); continue; }
                 let actRes = await apiReq('POST', `/games/${gid}/agents/${aid}/action`, { action });
                 if (actRes && actRes.data?.success) {
-                    mem.group1_cd_end = Date.now() + (["pickup", "equip", "drop", "use_item"].includes(action.type) ? 500 : TURN_DELAY);
+                    mem.group1_cd_end = Date.now() + (["pickup", "equip", "drop"].includes(action.type) ? 300 : TURN_DELAY);
+                    await sleep(1000);
+                } else {
+                    let err = String(actRes?.data?.error?.message || "").toLowerCase();
+                    if (!err.includes("cooldown")) console.log(`⚠️ [${BOT_NAME}] Nolak aksi: ${err}`);
+                    await sleep(1000);
                 }
-                await sleep(1000);
             } else await sleep(1000);
         }
     }
 }
 
+// =========================================================================
+// 🚀 EKSEKUTOR (JALANIN BOT PARALEL - RAM SUPER IRIT)
+// =========================================================================
 async function main() {
     console.log("=============================================");
-    console.log(" 🔥 KARTEL PEAXEL TS: MODE TAWURAN AKTIF 🔥 ");
+    console.log(" 🏭 KARTEL PEAXEL TYPESCRIPT FACTORY START 🏭");
     console.log("=============================================");
 
     if (DAFTAR_BOT.length === 0) {
-        console.error("❌ TIDAK ADA BOT DI bots_config.json");
+        console.error("❌ TIDAK ADA BOT YANG BERJALAN! Cek isi bots_config.json");
         return;
     }
 
-    // Start bot berdekatan biar ngebom server barengan
     const botPromises = DAFTAR_BOT.map(botConfig => {
-        return sleep(randomFloat(100, 1500)).then(() => jalankanSatuBot(botConfig));
+        return sleep(randomFloat(1000, 5000)).then(() => jalankanSatuBot(botConfig));
     });
 
     await Promise.all(botPromises);
