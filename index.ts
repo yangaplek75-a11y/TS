@@ -18,7 +18,6 @@ try {
     console.error("❌ GAGAL MEMBACA bots_config.json! Pastikan file ada dan formatnya benar.");
     process.exit(1);
 }
-// =========================================================================
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const randomFloat = (min: number, max: number) => Math.random() * (max - min) + min;
@@ -397,6 +396,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             break;
         }
 
+        // 🔥 DEKLARASI WAJIB BIAR GAK ERROR TS2304 🔥
         let gid: string | null = null;
         let aid: string | null = null;
 
@@ -411,12 +411,12 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             } catch (e) { }
         }
 
-        // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT) 🔥
+        // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT + DETAK JANTUNG) 🔥
         let scanCount = 0;
         while (!aid) {
             let res = await apiReq('GET', '/games?status=waiting');
             
-            // Tangkap list room lebih aman (identik dengan .get("data", []) di Python)
+            // Tangkap list room lebih aman
             let listRoom: any[] = [];
             if (res && res.data) {
                 if (Array.isArray(res.data.data)) listRoom = res.data.data;
@@ -429,13 +429,11 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             }
 
             if (listRoom.length > 0) {
-                // Cari dari urutan paling bawah (room paling baru dibikin)
                 for (let i = listRoom.length - 1; i >= 0; i--) {
                     let g = listRoom[i];
                     let sStatus = String(g?.status || "").toLowerCase();
                     let sType = String(g?.entryType || "").toLowerCase();
                     
-                    // 🔥 PERBAIKAN: Identik 100% sama Python (cuma cek status & entryType) 🔥
                     if (sStatus === "waiting" && sType !== "paid") {
                         gid = g.id || g._id;
                         break;
@@ -452,44 +450,20 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                     console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
                     fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
                     
-                    apiReq('POST', `/games/${gid}/start`); // Paksa server start
-                } else {
-                    let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
-                    console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
-                    gid = null; // Reset biar balik ke mode cari
-                }
-            }
-
-            // Jeda barbar! Delay cuma 0.5 - 1.5 detik biar gercep
-            if (!aid) {
-                await sleep(randomFloat(500, 1500));
-            }
-        }
-            
-            if (gid) {
-                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
-                let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
-
-                if (regRes && (regRes.data?.success || regRes.data?.id)) {
-                    aid = regRes.data?.data?.id || regRes.data?.id;
-                    console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
-                    fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
-                    
-                    // Paksa server buat Start game biar gak digantung
                     apiReq('POST', `/games/${gid}/start`); 
                 } else {
                     let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
                     console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
-                    gid = null; // Reset biar balik ke mode cari
+                    gid = null; 
                 }
             }
 
-            // Jeda barbar! Kalau belum dapet room, delay cuma 0.5 - 1 detik biar gercep
             if (!aid) {
                 await sleep(randomFloat(500, 1500));
             }
         }
 
+        // LOOP DALAM GAME
         while (true) {
             let stRes = await apiReq('GET', `/games/${gid}/agents/${aid}/state`);
             if (!stRes || [400, 403, 404].includes(stRes.status)) {
@@ -558,5 +532,3 @@ async function main() {
 }
 
 main();
-
-
