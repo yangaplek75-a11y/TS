@@ -412,9 +412,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         }
 
         // 🔥 LOGIC RADAR "SEDOT SEMUA DATA" 🔥
-        let scanCount = 0;
-        while (!aid) {
-            let res = await apiReq('GET', '/games?limit=50');
+        let res = await apiReq('GET', '/games?status=waiting');
             
             let listRoom: any[] = [];
             if (res && res.data) {
@@ -541,3 +539,4 @@ async function main() {
 }
 
 main();
+
