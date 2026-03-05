@@ -414,18 +414,25 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT + DETAK JANTUNG) 🔥
         let scanCount = 0;
         while (!aid) {
-            let res = await apiReq('GET', '/games?status=waiting');
+            // 💡 PERBAIKAN: Jangan pakai filter status di URL! Sedot semua data terbaru!
+            let res = await apiReq('GET', '/games?limit=50'); 
             
-            // Tangkap list room lebih aman
+            // Tangkap list room dengan jaring yang lebih lebar
             let listRoom: any[] = [];
             if (res && res.data) {
                 if (Array.isArray(res.data.data)) listRoom = res.data.data;
                 else if (Array.isArray(res.data)) listRoom = res.data;
+                else if (res.data.games && Array.isArray(res.data.games)) listRoom = res.data.games;
             }
 
             scanCount++;
             if (scanCount % 15 === 0) { 
-                console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Radar: Nemu ${listRoom.length} room aktif, nyari yg status waiting & gratis...`);
+                console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Radar: Nemu ${listRoom.length} total room, nyari yg gratis...`);
+                
+                // Kalau ternyata masih 0, kita intip servernya ngomong apa!
+                if (listRoom.length === 0 && res?.data) {
+                    console.log(`🔍 [DEBUG ${BOT_NAME}] Isi mentah dari server:`, JSON.stringify(res.data).substring(0, 150));
+                }
             }
 
             if (listRoom.length > 0) {
@@ -434,13 +441,34 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                     let sStatus = String(g?.status || "").toLowerCase();
                     let sType = String(g?.entryType || "").toLowerCase();
                     
-                    if (sStatus === "waiting" && sType !== "paid") {
+                    if (sStatus === "waiting" && sType !== "paid" && !(g?.fee > 0)) {
                         gid = g.id || g._id;
                         break;
                     }
                 }
             }
 
+            if (gid) {
+                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
+                let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
+
+                if (regRes && (regRes.data?.success || regRes.data?.id)) {
+                    aid = regRes.data?.data?.id || regRes.data?.id;
+                    console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
+                    fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
+                    
+                    apiReq('POST', `/games/${gid}/start`); 
+                } else {
+                    let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
+                    console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
+                    gid = null; 
+                }
+            }
+
+            if (!aid) {
+                await sleep(randomFloat(500, 1500));
+            }
+        }
             if (gid) {
                 console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
                 let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
@@ -532,3 +560,4 @@ async function main() {
 }
 
 main();
+
