@@ -411,8 +411,11 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             } catch (e) { }
         }
 
-        // 🔥 LOGIC RADAR "SEDOT SEMUA DATA" 🔥
-        let res = await apiReq('GET', '/games?status=waiting');
+        // 🔥 LOGIC RADAR "SEDOT AMAN" 🔥
+        let scanCount = 0;
+        while (!aid) {
+            // KITA KEMBALIKAN KE JALUR AMAN BIAR SERVER GAK MELEDAK
+            let res = await apiReq('GET', '/games?status=waiting');
             
             let listRoom: any[] = [];
             if (res && res.data) {
@@ -424,9 +427,6 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             scanCount++;
             if (scanCount % 15 === 0) { 
                 console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Radar: Nemu ${listRoom.length} total room, nyari yg gratis...`);
-                if (listRoom.length === 0 && res?.data) {
-                    console.log(`🔍 [DEBUG ${BOT_NAME}] Data server:`, JSON.stringify(res.data).substring(0, 150));
-                }
             }
 
             let foundGid = null;
@@ -449,7 +449,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
 
                 if (regRes && (regRes.data?.success || regRes.data?.id)) {
                     aid = regRes.data?.data?.id || regRes.data?.id;
-                    gid = foundGid; // Setel gid setelah sukses
+                    gid = foundGid; 
                     console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
                     fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
                     
@@ -467,7 +467,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
 
         // 🔥 LOOP DALAM GAME 🔥
         while (true) {
-            if (!gid || !aid) break; // Safety check ekstra
+            if (!gid || !aid) break; 
             
             let stRes = await apiReq('GET', `/games/${gid}/agents/${aid}/state`);
             if (!stRes || [400, 403, 404].includes(stRes.status)) {
@@ -539,4 +539,3 @@ async function main() {
 }
 
 main();
-
