@@ -414,28 +414,57 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT) 🔥
         let scanCount = 0;
         while (!aid) {
-            scanCount++;
-            if (scanCount % 15 === 0) { // Lapor setiap 15 kali putaran aja
-                console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Masih ngintip radar... (Room gratis belum ada)`);
+            let res = await apiReq('GET', '/games?status=waiting');
+            
+            // Tangkap list room lebih aman (identik dengan .get("data", []) di Python)
+            let listRoom: any[] = [];
+            if (res && res.data) {
+                if (Array.isArray(res.data.data)) listRoom = res.data.data;
+                else if (Array.isArray(res.data)) listRoom = res.data;
             }
 
-            let res = await apiReq('GET', '/games?status=waiting');
-            let listRoom = res?.data?.data || res?.data; // 🔥 INI BARIS YANG KETINGGALAN BOS! 🔥
+            scanCount++;
+            if (scanCount % 15 === 0) { 
+                console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Radar: Nemu ${listRoom.length} room aktif, nyari yg status waiting & gratis...`);
+            }
 
-            if (Array.isArray(listRoom) && listRoom.length > 0) {
+            if (listRoom.length > 0) {
                 // Cari dari urutan paling bawah (room paling baru dibikin)
                 for (let i = listRoom.length - 1; i >= 0; i--) {
                     let g = listRoom[i];
                     let sStatus = String(g?.status || "").toLowerCase();
                     let sType = String(g?.entryType || "").toLowerCase();
                     
-                    // Filter room yang beneran lagi nunggu dan GRATIS
-                    if (sStatus === "waiting" && sType !== "paid" && !(g?.fee > 0)) {
+                    // 🔥 PERBAIKAN: Identik 100% sama Python (cuma cek status & entryType) 🔥
+                    if (sStatus === "waiting" && sType !== "paid") {
                         gid = g.id || g._id;
                         break;
                     }
                 }
             }
+
+            if (gid) {
+                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
+                let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
+
+                if (regRes && (regRes.data?.success || regRes.data?.id)) {
+                    aid = regRes.data?.data?.id || regRes.data?.id;
+                    console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
+                    fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
+                    
+                    apiReq('POST', `/games/${gid}/start`); // Paksa server start
+                } else {
+                    let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
+                    console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
+                    gid = null; // Reset biar balik ke mode cari
+                }
+            }
+
+            // Jeda barbar! Delay cuma 0.5 - 1.5 detik biar gercep
+            if (!aid) {
+                await sleep(randomFloat(500, 1500));
+            }
+        }
             
             if (gid) {
                 console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
@@ -529,4 +558,5 @@ async function main() {
 }
 
 main();
+
 
