@@ -24,7 +24,7 @@ const randomFloat = (min: number, max: number) => Math.random() * (max - min) + 
 const randomChoice = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
 const getWaktu = () => new Date().toTimeString().split(' ')[0];
 
-// ================== FUNGSI DETEKSI & LOGIC ==================
+// ================== FUNGSI DETEKSI & LOGIC PYTHON ==================
 function ekstrakInfoItem(item: any): [string | null, string] {
     if (typeof item === 'string' || typeof item === 'number') return [String(item), "Barang Misterius"];
     if (typeof item === 'object' && item !== null) {
@@ -396,7 +396,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             break;
         }
 
-        // 🔥 DEKLARASI WAJIB BIAR GAK ERROR TS2304 🔥
+        // 🔥 DEKLARASI AMAN BIAR GAK ERROR TS2304 🔥
         let gid: string | null = null;
         let aid: string | null = null;
 
@@ -411,13 +411,11 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             } catch (e) { }
         }
 
-        // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT + DETAK JANTUNG) 🔥
+        // 🔥 LOGIC RADAR "SEDOT SEMUA DATA" 🔥
         let scanCount = 0;
         while (!aid) {
-            // 💡 PERBAIKAN: Jangan pakai filter status di URL! Sedot semua data terbaru!
-            let res = await apiReq('GET', '/games?limit=50'); 
+            let res = await apiReq('GET', '/games?limit=50');
             
-            // Tangkap list room dengan jaring yang lebih lebar
             let listRoom: any[] = [];
             if (res && res.data) {
                 if (Array.isArray(res.data.data)) listRoom = res.data.data;
@@ -428,13 +426,12 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             scanCount++;
             if (scanCount % 15 === 0) { 
                 console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Radar: Nemu ${listRoom.length} total room, nyari yg gratis...`);
-                
-                // Kalau ternyata masih 0, kita intip servernya ngomong apa!
                 if (listRoom.length === 0 && res?.data) {
-                    console.log(`🔍 [DEBUG ${BOT_NAME}] Isi mentah dari server:`, JSON.stringify(res.data).substring(0, 150));
+                    console.log(`🔍 [DEBUG ${BOT_NAME}] Data server:`, JSON.stringify(res.data).substring(0, 150));
                 }
             }
 
+            let foundGid = null;
             if (listRoom.length > 0) {
                 for (let i = listRoom.length - 1; i >= 0; i--) {
                     let g = listRoom[i];
@@ -442,18 +439,19 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                     let sType = String(g?.entryType || "").toLowerCase();
                     
                     if (sStatus === "waiting" && sType !== "paid" && !(g?.fee > 0)) {
-                        gid = g.id || g._id;
+                        foundGid = g.id || g._id;
                         break;
                     }
                 }
             }
 
-            if (gid) {
-                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
-                let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
+            if (foundGid) {
+                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(foundGid).slice(-5)}). Dobrak pintu!`);
+                let regRes = await apiReq('POST', `/games/${foundGid}/agents/register`, { name: BOT_NAME });
 
                 if (regRes && (regRes.data?.success || regRes.data?.id)) {
                     aid = regRes.data?.data?.id || regRes.data?.id;
+                    gid = foundGid; // Setel gid setelah sukses
                     console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
                     fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
                     
@@ -461,28 +459,6 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                 } else {
                     let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
                     console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
-                    gid = null; 
-                }
-            }
-
-            if (!aid) {
-                await sleep(randomFloat(500, 1500));
-            }
-        }
-            if (gid) {
-                console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
-                let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
-
-                if (regRes && (regRes.data?.success || regRes.data?.id)) {
-                    aid = regRes.data?.data?.id || regRes.data?.id;
-                    console.log(`✅ [${getWaktu()}] [${BOT_NAME}] BERHASIL MASUK! (Agent ID: ${String(aid).slice(-5)})`);
-                    fs.writeFileSync(SESSION_FILE, JSON.stringify({ game_id: gid, agent_id: aid }));
-                    
-                    apiReq('POST', `/games/${gid}/start`); 
-                } else {
-                    let err = regRes?.data?.message || regRes?.data?.error || "Room udah diembat orang";
-                    console.log(`⚠️ [${BOT_NAME}] Gagal dobrak: ${err}`);
-                    gid = null; 
                 }
             }
 
@@ -491,22 +467,27 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
             }
         }
 
-        // LOOP DALAM GAME
+        // 🔥 LOOP DALAM GAME 🔥
         while (true) {
+            if (!gid || !aid) break; // Safety check ekstra
+            
             let stRes = await apiReq('GET', `/games/${gid}/agents/${aid}/state`);
             if (!stRes || [400, 403, 404].includes(stRes.status)) {
-                if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE); break;
+                if (fs.existsSync(SESSION_FILE)) { try { fs.unlinkSync(SESSION_FILE); } catch(e){} }
+                break;
             }
             let state = stRes.data?.data;
             if (!state) { await sleep(1000); continue; }
 
             if (!state.self?.isAlive) {
                 console.log(`\n💀 [${BOT_NAME}] MATI! TKP: ${state.currentRegion?.name || '?'}`);
-                if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE); await sleep(3000); break;
+                if (fs.existsSync(SESSION_FILE)) { try { fs.unlinkSync(SESSION_FILE); } catch(e){} }
+                await sleep(3000); break;
             }
             if (state.gameStatus === "finished") {
                 console.log(`\n🏁 [${BOT_NAME}] MATCH SELESAI!`);
-                if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE); await sleep(3000); break;
+                if (fs.existsSync(SESSION_FILE)) { try { fs.unlinkSync(SESSION_FILE); } catch(e){} }
+                await sleep(3000); break;
             }
 
             if (Date.now() - mem.last_print_time >= 20000) {
@@ -560,4 +541,3 @@ async function main() {
 }
 
 main();
-
