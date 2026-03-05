@@ -412,9 +412,15 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
         }
 
         // 🔥 LOGIC RADAR SUPER BARBAR (ANTI-NYANGKUT) 🔥
+        let scanCount = 0;
         while (!aid) {
+            scanCount++;
+            if (scanCount % 15 === 0) { // Lapor setiap 15 kali putaran aja
+                console.log(`📡 [${getWaktu()}] [${BOT_NAME}] Masih ngintip radar... (Room gratis belum ada)`);
+            }
+
             let res = await apiReq('GET', '/games?status=waiting');
-            let listRoom = res?.data?.data || res?.data;
+            let listRoom = res?.data?.data || res?.data; // 🔥 INI BARIS YANG KETINGGALAN BOS! 🔥
 
             if (Array.isArray(listRoom) && listRoom.length > 0) {
                 // Cari dari urutan paling bawah (room paling baru dibikin)
@@ -430,7 +436,7 @@ async function jalankanSatuBot(botConfig: { name: string, apiKey: string }) {
                     }
                 }
             }
-
+            
             if (gid) {
                 console.log(`🧾 [${getWaktu()}] [${BOT_NAME}] Nemu Room (${String(gid).slice(-5)}). Dobrak pintu!`);
                 let regRes = await apiReq('POST', `/games/${gid}/agents/register`, { name: BOT_NAME });
@@ -523,3 +529,4 @@ async function main() {
 }
 
 main();
+
